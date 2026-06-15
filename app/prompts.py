@@ -71,7 +71,11 @@ def build_user_prompt(event: dict) -> str:
     # webhook error.created manda data.error, issue.* manda data.issue)
     inner = event.get("data", {}) or {}
     data = inner.get("event") or inner.get("error") or inner.get("issue") or event.get("event", event)
-    exc = (data.get("exception", {}) or {}).get("values", [{}])[0]
+    exception_values = (data.get("exception", {}) or {}).get("values")
+    if isinstance(exception_values, list) and exception_values:
+        exc = exception_values[0]
+    else:
+        exc = {}
 
     # Stack trace formatado
     frames = exc.get("stacktrace", {}).get("frames", [])
