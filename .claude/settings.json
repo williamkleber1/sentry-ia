@@ -6,7 +6,8 @@
       "Bash(pip3 list *)",
       "Bash(python3 -m venv .venv)",
       "Bash(.venv/bin/pip install *)",
-      "Bash(.venv/bin/python -c \"import fastapi, uvicorn, anthropic, sentry_sdk, github, dotenv; print\\('todas as deps OK'\\)\")"
+      "Bash(.venv/bin/python -c \"import fastapi, uvicorn, anthropic, sentry_sdk, github, dotenv; print\\('todas as deps OK'\\)\")",
+      "Bash(break)"
     ]
   }
 }

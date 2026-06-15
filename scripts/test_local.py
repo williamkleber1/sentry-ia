@@ -12,7 +12,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-from app import llm, github_client
+from app import llm, issues
 
 
 def main():
@@ -32,7 +32,7 @@ def main():
 
     print("\n2️⃣  Criando issue no GitHub...")
     try:
-        issue = github_client.create_issue(analysis, payload["event"])
+        issue = issues.create_issue(analysis, payload["event"])
         print(f"\n✅ Issue criada: {issue['url']}")
     except Exception as e:
         print(f"\n⚠️  Erro ao criar issue: {e}")

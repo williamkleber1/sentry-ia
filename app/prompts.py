@@ -67,8 +67,10 @@ Responda APENAS com o JSON."""
 
 def build_user_prompt(event: dict) -> str:
     """Constrói o prompt formatado a partir de um payload de evento do Sentry."""
-    # Extração defensiva (Sentry payloads variam por SDK/versão)
-    data = event.get("event", event)  # webhook envelopa em "event"
+    # Extração defensiva (Sentry varia por resource: alert rule manda data.event,
+    # webhook error.created manda data.error, issue.* manda data.issue)
+    inner = event.get("data", {}) or {}
+    data = inner.get("event") or inner.get("error") or inner.get("issue") or event.get("event", event)
     exc = (data.get("exception", {}) or {}).get("values", [{}])[0]
 
     # Stack trace formatado
@@ -94,18 +96,31 @@ def build_user_prompt(event: dict) -> str:
         crumb_lines.append(f"- [{ts}] {cat}: {msg}")
     breadcrumbs = "\n".join(crumb_lines) if crumb_lines else "(sem breadcrumbs)"
 
-    # Request
+    # Request — headers vêm como dict (mock) ou lista de pares [k, v] (Sentry real)
     req = data.get("request", {}) or {}
+    raw_headers = req.get("headers") or {}
+    if isinstance(raw_headers, list):
+        header_items = [(h[0], h[1]) for h in raw_headers if isinstance(h, (list, tuple)) and len(h) >= 2]
+    else:
+        header_items = list(raw_headers.items())
     request_info = (
         f"Method: {req.get('method', 'N/A')}\n"
         f"URL: {req.get('url', 'N/A')}\n"
-        f"Headers: {dict(list((req.get('headers') or {}).items())[:5])}"
+        f"Headers: {dict(header_items[:5])}"
     )
 
-    # Tags
+    # Tags — pode vir como lista de pares [k, v] ou lista de dicts {"key","value"}
     tags = data.get("tags", []) or []
-    tag_lines = [f"  - {t[0]}: {t[1]}" for t in tags if len(t) >= 2][:10]
-    tags_str = "\n".join(tag_lines) if tag_lines else "(sem tags)"
+    tag_lines = []
+    for t in tags:
+        if isinstance(t, dict):
+            k, v = t.get("key"), t.get("value")
+        elif isinstance(t, (list, tuple)) and len(t) >= 2:
+            k, v = t[0], t[1]
+        else:
+            continue
+        tag_lines.append(f"  - {k}: {v}")
+    tags_str = "\n".join(tag_lines[:10]) if tag_lines else "(sem tags)"
 
     return USER_PROMPT_TEMPLATE.format(
         exception_type=exc.get("type", "Unknown"),

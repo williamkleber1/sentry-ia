@@ -9,7 +9,7 @@ import sentry_sdk
 from fastapi import FastAPI, Request, HTTPException, BackgroundTasks
 from sentry_sdk.integrations.fastapi import FastApiIntegration
 
-from app import config, llm, github_client
+from app import config, llm, issues
 
 # ============================================
 # Sentry init
@@ -97,9 +97,11 @@ def _process_webhook(payload: dict) -> None:
         return
 
     try:
-        # 'data' do webhook do Sentry envelopa o event
-        event_data = payload.get("data", {}).get("event") or payload.get("event") or payload
-        issue = github_client.create_issue(analysis, event_data)
+        # 'data' do webhook do Sentry: alert rule manda data.event; webhook de
+        # resource manda data.error (error.created) ou data.issue (issue.*)
+        d = payload.get("data", {}) or {}
+        event_data = d.get("event") or d.get("error") or d.get("issue") or payload.get("event") or payload
+        issue = issues.create_issue(analysis, event_data)
         logger.info(f"🎫 Issue criada: {issue['url']}")
     except Exception:
         logger.exception("Falha ao criar issue no GitHub")
@@ -139,7 +141,7 @@ async def test_analyze(request: Request):
     analysis = llm.analyze_event(payload)
     # Suporta tanto payload "puro" quanto envelope do webhook
     event_data = payload.get("data", {}).get("event") or payload.get("event") or payload
-    issue = github_client.create_issue(analysis, event_data)
+    issue = issues.create_issue(analysis, event_data)
     return {"status": "ok", "analysis": analysis, "issue": issue}
 
 
