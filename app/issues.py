@@ -11,15 +11,17 @@ from app import config
 logger = logging.getLogger(__name__)
 
 
-def create_issue(analysis: dict[str, Any], event: dict[str, Any]) -> dict[str, Any]:
-    """Cria o card no board configurado via ISSUE_PROVIDER."""
-    provider = config.ISSUE_PROVIDER
+def create_issue(analysis: dict[str, Any], event: dict[str, Any],
+                  provider: str | None = None, assign_copilot: bool | None = None) -> dict[str, Any]:
+    """Cria o card no board escolhido. `provider`/`assign_copilot` sobrescrevem o .env por requisição."""
+    provider = (provider or config.ISSUE_PROVIDER).lower()
     logger.info(f"Criando card no provider: {provider}")
 
     if provider == "github":
         from app import github_client
-        return github_client.create_issue(analysis, event)
+        return github_client.create_issue(analysis, event, assign_copilot=assign_copilot)
     if provider == "jira":
+        # Copilot é só GitHub — ignorado no Jira
         from app import jira_client
         return jira_client.create_issue(analysis, event)
 

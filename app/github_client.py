@@ -79,8 +79,43 @@ def _assign_to_copilot(issue_number: int) -> None:
         logger.info(f"🤖 Issue #{issue_number} assignada pro Copilot — PR draft a caminho (~minutos)")
 
 
-def create_issue(analysis: dict[str, Any], event: dict[str, Any]) -> dict[str, Any]:
-    """Cria issue no GitHub com a análise. Retorna {number, url}."""
+def find_pr_for_issue(issue_number: int) -> str | None:
+    """Acha o PR realmente ligado à issue (via timeline). Retorna a URL ou None.
+
+    Usa cross-reference/connected events em vez de chutar pelo PR mais recente —
+    assim não confunde com PRs de outras issues.
+    """
+    owner, repo = config.GITHUB_REPO.split("/", 1)
+    q = """query($o:String!,$r:String!,$n:Int!){
+      repository(owner:$o,name:$r){ issue(number:$n){
+        timelineItems(itemTypes:[CROSS_REFERENCED_EVENT,CONNECTED_EVENT], first:30){
+          nodes{
+            __typename
+            ... on CrossReferencedEvent { source { __typename ... on PullRequest { url } } }
+            ... on ConnectedEvent { subject { __typename ... on PullRequest { url } } }
+          }}}}}"""
+    r = httpx.post(_GRAPHQL, headers={"Authorization": f"Bearer {config.GITHUB_TOKEN}"},
+                   json={"query": q, "variables": {"o": owner, "r": repo, "n": issue_number}}, timeout=20)
+    try:
+        nodes = r.json()["data"]["repository"]["issue"]["timelineItems"]["nodes"]
+    except (KeyError, TypeError):
+        return None
+    for n in nodes:
+        obj = n.get("source") or n.get("subject") or {}
+        if obj.get("__typename") == "PullRequest" and obj.get("url"):
+            return obj["url"]
+    return None
+
+
+def comment_on_issue(issue_number: int, text: str) -> None:
+    """Comenta na issue (usado pra deixar o link do PR do Copilot)."""
+    gh = Github(config.GITHUB_TOKEN)
+    gh.get_repo(config.GITHUB_REPO).get_issue(issue_number).create_comment(text)
+
+
+def create_issue(analysis: dict[str, Any], event: dict[str, Any],
+                 assign_copilot: bool | None = None) -> dict[str, Any]:
+    """Cria issue no GitHub com a análise. Retorna {number, url, copilot_assigned}."""
     if not config.GITHUB_TOKEN or not config.GITHUB_REPO:
         raise RuntimeError("GITHUB_TOKEN e GITHUB_REPO precisam estar no .env")
 
@@ -103,11 +138,14 @@ def create_issue(analysis: dict[str, Any], event: dict[str, Any]) -> dict[str, A
             raise
     logger.info(f"Issue #{issue.number} criada: {issue.html_url}")
 
-    # Opcional: assignar pro Copilot Coding Agent gerar PR draft (default off — leva ~minutos)
-    if config.ENABLE_COPILOT_ASSIGN:
+    # Assignar pro Copilot Coding Agent gerar PR draft (override por requisição ou .env)
+    want_copilot = config.ENABLE_COPILOT_ASSIGN if assign_copilot is None else assign_copilot
+    assigned = False
+    if want_copilot:
         try:
             _assign_to_copilot(issue.number)
+            assigned = True
         except Exception:
             logger.exception("Falha ao assignar Copilot (issue criada mesmo assim)")
 
-    return {"number": issue.number, "url": issue.html_url}
+    return {"number": issue.number, "url": issue.html_url, "copilot_assigned": assigned}
