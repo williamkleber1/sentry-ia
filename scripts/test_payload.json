@@ -1,0 +1,65 @@
+{
+  "event": {
+    "event_id": "abc123def456",
+    "project": "whatsapp-broker",
+    "environment": "production",
+    "release": "broker@2.4.1",
+    "platform": "python",
+    "event_count": 47,
+    "user_count": 12,
+    "first_seen": "2026-06-09T08:14:22Z",
+    "last_seen": "2026-06-09T10:31:05Z",
+    "url": "https://hitss.sentry.io/issues/123456/",
+    "exception": {
+      "values": [
+        {
+          "type": "KeyError",
+          "value": "'genesys_session_id'",
+          "stacktrace": {
+            "frames": [
+              {
+                "filename": "app/services/genesys_router.py",
+                "lineno": 87,
+                "function": "route_message",
+                "context_line": "session_id = ctx['genesys_session_id']"
+              },
+              {
+                "filename": "app/handlers/whatsapp_handler.py",
+                "lineno": 142,
+                "function": "process_inbound",
+                "context_line": "result = router.route_message(ctx)"
+              },
+              {
+                "filename": "app/api/webhooks.py",
+                "lineno": 58,
+                "function": "whatsapp_webhook",
+                "context_line": "return handler.process_inbound(payload)"
+              }
+            ]
+          }
+        }
+      ]
+    },
+    "breadcrumbs": {
+      "values": [
+        {"timestamp": "2026-06-09T10:30:58Z", "category": "http", "message": "POST /webhooks/whatsapp received"},
+        {"timestamp": "2026-06-09T10:30:59Z", "category": "db", "message": "Buscando contexto da conversa no Redis"},
+        {"timestamp": "2026-06-09T10:31:00Z", "category": "cache", "message": "Cache hit: contexto carregado"},
+        {"timestamp": "2026-06-09T10:31:01Z", "category": "business", "message": "Tentando rotear pra Genesys"}
+      ]
+    },
+    "request": {
+      "method": "POST",
+      "url": "https://api.hitss.com/webhooks/whatsapp",
+      "headers": {
+        "user-agent": "WhatsApp/Cloud-API",
+        "content-type": "application/json"
+      }
+    },
+    "tags": [
+      ["service", "whatsapp-broker"],
+      ["region", "us-east-1"],
+      ["customer_id", "acme-corp"]
+    ]
+  }
+}
