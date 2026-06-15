@@ -71,7 +71,7 @@ def trigger_error(kind: str = "null_ref"):
     if kind == "type":
         sentry_sdk.add_breadcrumb(category="parsing", message="Parsing payload", level="info")
         idade = "42"
-        return {"idade_no_proximo_ano": idade + 1}  # bug: string + int
+        return {"idade_no_proximo_ano": int(idade) + 1}
 
     if kind == "timeout":
         sentry_sdk.add_breadcrumb(category="http", message="Chamando API externa", level="info")
