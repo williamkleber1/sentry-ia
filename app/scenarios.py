@@ -5,6 +5,7 @@ Usado pelo painel (/) e pelo endpoint síncrono (/demo/run):
 - `raise_scenario(kind)` executa o bug de verdade, pra ser capturado pelo Sentry
 """
 from typing import Any
+from app.handlers.batch import primeira_mensagem
 
 _PROJECT = "whatsapp-broker"
 _REQUEST = {
@@ -81,7 +82,7 @@ SCENARIOS: list[dict[str, Any]] = [
         "description": "Lista de mensagens vazia: acesso ao primeiro item de um batch sem itens.",
         "event": _event("index", "IndexError", "list index out of range",
             [{"filename": "app/handlers/batch.py", "lineno": 39, "function": "primeira_mensagem",
-              "context_line": "return mensagens[0]['body']"}],
+              "context_line": "if not mensagens: return None"}],
             [_crumb("queue", "Consumindo batch da fila SQS"), _crumb("business", "Batch chegou vazio", "warning")],
             [["service", "batch-consumer"]]),
     },
@@ -161,8 +162,8 @@ def raise_scenario(kind: str) -> None:
     elif kind == "timeout":
         raise TimeoutError("Genesys API não respondeu em 30s")
     elif kind == "index":
-        mensagens: list = []
-        _ = mensagens[0]
+        mensagens: list[dict] = []
+        _ = primeira_mensagem(mensagens)
     elif kind == "value":
         _ = int("+5511x9999")
     elif kind == "connection":
