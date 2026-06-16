@@ -172,7 +172,7 @@ def raise_scenario(kind: str) -> None:
         json.loads("not json")
     elif kind == "none_attr":
         nome = None
-        _ = nome.lower()  # type: ignore[union-attr]
+        _ = nome.lower() if nome is not None else None
     elif kind == "genesys_auth":
         raise PermissionError("Genesys Cloud retornou 401: token de serviço expirado")
     elif kind == "unicode":
