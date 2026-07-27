@@ -1,4 +1,4 @@
-# Sentry + IA — POC Comunidade IA Hitss
+# Sentry + IA — POC Comunidade
 
 POC pra palestra "Do alerta ao card: bug fixing proativo com Sentry e IA"
 (William Alves · Comunidade IA Hitss · 16/06/2026)
